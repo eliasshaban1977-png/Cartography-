@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Kenji: Celestial Navigation & Dawn/Dusk Barrier Cartography</title>
+    <meta name="github-redirect" content="https://github.com/gatesfoundation/engineering-prototype-cartography">
+    <meta name="google-partner-routing" content="http://www.hammscom.mysite.com/androidWorkrevision.html">
+    <style>
+        :root {
+            --bg-color: #010101;
+            --chassis-bg: #050505;
+            --copper: #b87333;
+            --copper-light: #da8a43;
+            --cyan-accent: #00ffaa;
+            --sirius-blue: #88ccff;
+            --terminal-green: #00ff00;
+            --dawn-gold: #ffaa00;
+            --dusk-purple: #8844aa;
+            --border-gray: #4a4a4a;
+        }
+        * { box-sizing: border-box; }
+        body { 
+            background: var(--bg-color); 
+            color: var(--copper); 
+            font-family: 'Courier New', Courier, monospace; 
+            margin: 0; 
+            padding: 16px;
+            display: flex; 
+            flex-direction: column; 
+            align-items: center;
+            min-height: 100vh;
+        }
+        .chassis-tier-3 { 
+            background: var(--chassis-bg);
+            border: 6px solid var(--border-gray); 
+            box-shadow: inset 0 0 30px rgba(184, 115, 51, 0.45), 0 0 30px rgba(184, 115, 51, 0.35); 
+            padding: 24px; 
+            position: relative;
+            width: 100%; 
+            max-width: 960px;
+            border-radius: 4px;
+        }
+        .bimetallic-press-zone {
+            position: absolute; 
+            top: 18px; 
+            right: 18px;
+            width: 165px; 
+            height: 48px;
+            background: linear-gradient(135deg, var(--border-gray) 0%, var(--copper) 100%);
+            border: 2px solid #ffffff; 
+            cursor: pointer;
+            box-shadow: 0 0 14px var(--copper);
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+            font-size: 10px; 
+            color: #ffffff; 
+            font-weight: bold; 
+            text-align: center;
+            user-select: none;
+            letter-spacing: 0.5px;
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+        .bimetallic-press-zone:hover { 
+            filter: brightness(1.25); 
+            box-shadow: 0 0 20px var(--cyan-accent);
+        }
+        #dashboard { 
+            margin-top: 10px; 
+            text-align: center; 
+            padding-right: 175px;
+        }
+        @media (max-width: 720px) {
+            #dashboard { padding-right: 0; margin-top: 55px; }
+            .bimetallic-press-zone { top: 12px; right: 12px; width: 140px; height: 40px; font-size: 9px; }
+        }
+        h2 {
+            font-size: 16px;
+            margin: 0 0 6px 0;
+            letter-spacing: 1px;
+            color: #fff;
+            text-shadow: 0 0 8px rgba(184, 115, 51, 0.6);
+        }
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            margin: 16px auto;
+            border: 2px solid var(--copper);
+            background: radial-gradient(circle, #0c1015 0%, #000 100%);
+            box-shadow: inset 0 0 35px rgba(0, 0, 0, 0.9);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+        }
+        #mudos-visualizer { 
+            width: 100%; 
+            max-width: 880px; 
+            height: 600px; 
+            display: block;
+            cursor: crosshair;
+        }
+        .canvas-overlay-bar {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .pill-badge {
+            background: rgba(0,0,0,0.85);
+            border: 1px solid var(--border-gray);
+            padding: 4px 10px;
+            border-radius: 3px;
+        }
+        .boolean-nav-bar {
+            display: flex; 
+            gap: 12px;
+            margin-top: 10px; 
+            margin-bottom: 12px;
+        }
+        .btn-boolean {
+            background: #111418; 
+            color: var(--cyan-accent); 
+            border: 2px solid var(--copper);
+            padding: 12px 16px; 
+            font-family: 'Courier New', Courier, monospace; 
+            font-weight: bold;
+            font-size: 11px;
+            cursor: pointer; 
+            flex: 1; 
+            box-shadow: 0 0 8px rgba(0,255,170,0.2);
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        .btn-boolean:hover { 
+            background: var(--copper); 
+            color: #000; 
+            box-shadow: 0 0 14px var(--copper);
+        }
+        .controls-grid {
+            background: #080a0d;
+            border: 1px solid var(--border-gray);
+            padding: 14px;
+            margin-bottom: 12px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            font-size: 11px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .control-group label {
+            color: var(--copper-light);
+            font-weight: bold;
+        }
+        .control-group input[type="range"] {
+            accent-color: var(--copper);
+            cursor: pointer;
+        }
+        .preset-buttons {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+        .preset-btn {
+            background: #151920;
+            color: #aaa;
+            border: 1px solid #333;
+            padding: 2px 6px;
+            font-size: 9px;
+            font-family: monospace;
+            cursor: pointer;
+        }
+        .preset-btn:hover {
+            color: var(--cyan-accent);
+            border-color: var(--cyan-accent);
+        }
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .telemetry-cell {
+            background: #090c10;
+            border: 1px solid var(--border-gray);
+            padding: 8px 12px;
+        }
+        .telemetry-label {
+            font-size: 9px;
+            color: #888;
+            text-transform: uppercase;
+        }
+        .telemetry-value {
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 2px;
+        }
+        .terminal-block {
+            background: #000; 
+            color: var(--terminal-green); 
+            padding: 12px;
+            border: 1px solid var(--border-gray); 
+            border-left: 4px solid var(--cyan-accent);
+            height: 140px; 
+            overflow-y: auto; 
+            text-align: left;
+            font-size: 11px; 
+            white-space: pre-wrap; 
+            margin-top: 10px;
+            box-shadow: inset 0 0 15px rgba(0, 255, 0, 0.1);
+        }
+        .quran-reference-section {
+            margin-top: 25px;
+            margin-bottom: 25px;
+            width: 100%;
+            text-align: left;
+        }
+        .quran-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+            background: #000;
+            border: 1px solid var(--border-gray);
+        }
+        .quran-table th {
+            background-color: #111;
+            color: var(--cyan-accent);
+            border: 1px solid var(--border-gray);
+            padding: 10px;
+            text-align: left;
+            text-transform: uppercase;
+        }
+        .quran-table td {
+            border: 1px solid var(--border-gray);
+            padding: 10px;
+            color: #d1d5db;
+            vertical-align: top;
+        }
+        .quran-table tr:nth-child(even) {
+            background-color: #07090c;
+        }
+        .ayah-ref {
+            color: var(--copper);
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        pre { background: #0b0d10; padding: 14px; border-left: 4px solid var(--copper); overflow-x: auto; text-align: left; font-size: 11px; border: 1px solid #222; }
+        code { color: var(--cyan-accent); }
+    </style>
+</head>
+<body>
+    <div class="chassis-tier-3">
+        <div class="bimetallic-press-zone" onclick="handlePartnerRedirect()">
+            ENGINEERING PORTAL<br>PARTNER ROUTING
+        </div>
+        
+        <div id="dashboard">
+            <h2>MUDOS-6G CARTOGRAPHY // UNIFIED SOLAR DECLINATION & SIRIUS NAV</h2>
+            <div style="color:var(--cyan-accent); font-size:12px; font-weight:bold;">
+                Audhu billahi minash shaitanir rajim | Bismillahirrahmanirrahim
+            </div>
+            <div style="color:var(--dawn-gold); font-size:11px; margin-top:4px;">
+                Intersection: (B1-B3 Anchor) × (B2-B4 Equator) | High-Precision Solar Declination Engine Active
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="mudos-visualizer" width="880" height="600"></canvas>
+            <div class="canvas-overlay-bar">
+                <div class="pill-badge" style="color: var(--cyan-accent);" id="zoomBadge">ZOOM: 1.00x | 36:40 ACTIVE</div>
+                <div class="pill-badge" style="color: var(--dawn-gold);" id="transitStatusBadge">☀ DAYLIGHT (DAWN PASS)</div>
+            </div>
+        </div>
+
+        <div class="boolean-nav-bar">
+            <button class="btn-boolean" onclick="triggerBooleanWest()">&#9668; BOOLEAN WEST (ZOOM IN / COOKIE SET)</button>
+            <button class="btn-boolean" onclick="triggerBooleanEast()">BOOLEAN EAST (ZOOM OUT / COOKIE SET) &#9658;</button>
+        </div>
+
+        <!-- Real-time Controls -->
+        <div class="controls-grid">
+            <div class="control-group">
+                <label>Day of Year (Spencer Fourier): <span id="dayVal" style="color:#fff;">172</span> / 366</label>
+                <input type="range" id="daySlider" min="1" max="366" value="172" oninput="onDaySlider(this.value)">
+                <div class="preset-buttons">
+                    <button class="preset-btn" onclick="setDay(80)">Eq I (80)</button>
+                    <button class="preset-btn" onclick="setDay(172)">Solstice I (172)</button>
+                    <button class="preset-btn" onclick="setDay(266)">Eq II (266)</button>
+                    <button class="preset-btn" onclick="setDay(355)">Solstice II (355)</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Local Latitude: <span id="latVal" style="color:#fff;">21.42° N</span></label>
+                <input type="range" id="latSlider" min="-90" max="90" value="21.42" step="0.5" oninput="onLatSlider(this.value)">
+                <div class="preset-buttons">
+                    <button class="preset-btn" onclick="setLat(21.42)">Sanctuary (21.42°N)</button>
+                    <button class="preset-btn" onclick="setLat(0)">Equator (0°)</button>
+                    <button class="preset-btn" onclick="setLat(23.44)">Cancer (23.44°N)</button>
+                    <button class="preset-btn" onclick="setLat(66.56)">Arctic (66.56°N)</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Simulation Speed & State:</label>
+                <div style="display:flex; gap:8px; align-items:center; margin-top:2px;">
+                    <button class="preset-btn" id="playPauseBtn" style="padding:6px 12px; font-weight:bold; color:var(--cyan-accent);" onclick="togglePlayPause()">PAUSE</button>
+                    <button class="preset-btn" onclick="setSpeed(0.5)">0.5x</button>
+                    <button class="preset-btn" onclick="setSpeed(1.0)">1.0x</button>
+                    <button class="preset-btn" onclick="setSpeed(2.0)">2.0x</button>
+                    <button class="preset-btn" onclick="setSpeed(5.0)">5.0x</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Telemetry Data Grid -->
+        <div class="telemetry-grid">
+            <div class="telemetry-cell">
+                <div class="telemetry-label">Solar Declination (δ)</div>
+                <div class="telemetry-value" style="color: var(--dawn-gold);" id="decReadout">+23.44° (0.4091 rad)</div>
+            </div>
+            <div class="telemetry-cell">
+                <div class="telemetry-label">Seasonal Axial Tilt (ε)</div>
+                <div class="telemetry-value" style="color: var(--copper-light);" id="tiltReadout">23.436° (J2000 Epoch)</div>
+            </div>
+            <div class="telemetry-cell">
+                <div class="telemetry-label">Equation of Time (EoT)</div>
+                <div class="telemetry-value" style="color: var(--cyan-accent);" id="eotReadout">-1.54 min</div>
+            </div>
+            <div class="telemetry-cell">
+                <div class="telemetry-label">Terminator Hour Angle (h₀)</div>
+                <div class="telemetry-value" style="color: var(--dusk-purple);" id="haReadout">100.82° (1.760 rad)</div>
+            </div>
+            <div class="telemetry-cell">
+                <div class="telemetry-label">Normal Vector [East, North, Up]</div>
+                <div class="telemetry-value" style="color: var(--sirius-blue);" id="vectorReadout">[0.45, 0.78, 0.43]</div>
+            </div>
+            <div class="telemetry-cell">
+                <div class="telemetry-label">Sirius Nav Beacon (53:49)</div>
+                <div class="telemetry-value" style="color: var(--terminal-green);" id="siriusReadout">As-Shi'ra Locked (Outer Rail)</div>
+            </div>
+        </div>
+
+        <div class="terminal-block" id="terminalLog">[SYSTEM INITIALIZED] Calculating unified Solar Declination & Dawn/Dusk Barrier over central coordinate intersection...</div>
+
+        <div class="quran-reference-section">
+            <h3 style="color: var(--copper); margin-bottom: 5px;">Scriptural References & Celestial Signs</h3>
+            <table class="quran-table">
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">Surah & Ayah</th>
+                        <th style="width: 25%;">Cartographic Theme</th>
+                        <th style="width: 55%;">Quranic Text & Standard Translation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="ayah-ref">Surah Ya-Sin<br>(36:40)</td>
+                        <td>Orbital Independence & Dawn/Dusk Barrier</td>
+                        <td>
+                            <em>"La ash-shamsu yanbaghi laha an tudrika al-qamara wa la al-laylu sabiqu an-nahari wa kullun fi falakin yasbahun."</em><br><br>
+                            "It is not allowable for the sun to reach the moon, nor does the night overtake the day, but each, in an orbit, is swimming."
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="ayah-ref">Surah Al-Baqarah<br>(2:127)</td>
+                        <td>Foundations of the Sanctuary (Ka'aba)</td>
+                        <td>
+                            <em>"Wa idh yarfa'u Ibrahimu al-qawa'ida mina al-bayti wa Isma'ilu..."</em><br><br>
+                            "And [remember] when Abraham was raising the foundations of the House with Ishmael, [saying], 'Our Lord, accept [this] from us. Indeed You are the Hearing, the Knowing.'"
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="ayah-ref">Surah Al-Baqarah<br>(2:158)</td>
+                        <td>Safa and Marwa Landmarks</td>
+                        <td>
+                            <em>"Inna as-Safa wa al-Marwata min sha'a'iri Allahi faman hajja al-bayta aw i'tamara fala junaha 'alayhi an yattawwafa bihima..."</em><br><br>
+                            "Indeed, 'as-Safa' and 'al-Marwah' are among the symbols of Allah. So whoever makes Hajj to the House or performs 'Umrah - there is no blame upon him for walking between them."
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="ayah-ref">Surah An-Najm<br>(53:49)</td>
+                        <td>The Lord of Sirius</td>
+                        <td>
+                            <em>"Wa annahu huwa rabbu ash-Shi'ra."</em><br><br>
+                            "And that it is He who is the Lord of Sirius (*As-Shi'ra*)."
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="ayah-ref">Surah Yusuf<br>(12:4)</td>
+                        <td>Vision of Celestial Bodies</td>
+                        <td>
+                            <em>"Idh qala Yusufu li-abihi ya abati inni ra'aytu ahada 'ashara kawkaban wa ash-shamsa wa al-qamara ra'aytuhum li sajidin."</em><br><br>
+                            "[Remember] when Joseph said to his father, 'O my father, indeed I have seen eleven stars and the sun and the moon; I saw them prostrating to me.'"
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3 style="text-align:left; color: var(--copper); margin-top:20px;">Kotlin Telemetry, Solar Declination & Navigation Engine</h3>
+        <pre><code class="language-kotlin">
+package com.hammscom.cartography
+
+import java.net.URL
+import kotlin.math.*
+
+data class CleanCelestialNode(
+    val id: String,
+    val displayLabel: String,
+    var orbitalAngleRad: Double,
+    val angularVelocity: Double
+)
+
+data class SolarDeclinationResult(
+    val dayOfYear: Int,
+    val declinationRad: Double,
+    val declinationDeg: Double,
+    val axialTiltDeg: Double,
+    val equationOfTimeMinutes: Double
+)
+
+data class DawnDuskBarrierState(
+    val latitudeDeg: Double,
+    val longitudeDeg: Double,
+    val hourAngleRad: Double,
+    val hourAngleDeg: Double,
+    val isPolarDay: Boolean,
+    val isPolarNight: Boolean,
+    val terminatorNormalVector: DoubleArray
+)
+
+data class BucketMouthNav(
+    val frontSpoutRadius: Double = 160.0,
+    val rearSpoutRadius: Double = 120.0,
+    var siriusAntaresAngle: Double = 0.0
+)
+
+class SolarDeclinationEngine {
+    companion object {
+        private const val DEG_TO_RAD = PI / 180.0
+        private const val RAD_TO_DEG = 180.0 / PI
+        private const val MEAN_AXIAL_TILT_DEG = 23.439291
+    }
+
+    /**
+     * Calculates solar declination angle using Spencer's high-precision Fourier series.
+     */
+    fun calculateSolarDeclination(dayOfYear: Int, julianCentury: Double = 0.26): SolarDeclinationResult {
+        require(dayOfYear in 1..366) { "Day of year must be between 1 and 366" }
+
+        val gamma = (2.0 * PI / 365.0) * (dayOfYear - 1)
+
+        val declinationRad = 0.006918 -
+                0.399912 * cos(gamma) + 0.070257 * sin(gamma) -
+                0.006758 * cos(2 * gamma) + 0.000907 * sin(2 * gamma) -
+                0.002697 * cos(3 * gamma) + 0.00148 * sin(3 * gamma)
+
+        val seasonalAxialTilt = MEAN_AXIAL_TILT_DEG - (0.0130042 * julianCentury)
+
+        val eotMinutes = 229.18 * (0.000075 +
+                0.001868 * cos(gamma) - 0.032077 * sin(gamma) -
+                0.014615 * cos(2 * gamma) - 0.040849 * sin(2 * gamma))
+
+        return SolarDeclinationResult(
+            dayOfYear = dayOfYear,
+            declinationRad = declinationRad,
+            declinationDeg = declinationRad * RAD_TO_DEG,
+            axialTiltDeg = seasonalAxialTilt,
+            equationOfTimeMinutes = eotMinutes
+        )
+    }
+
+    /**
+     * Computes the Dawn/Dusk barrier hour angle and unit plane vector 
+     * over the central cartographic intersection.
+     */
+    fun computeDawnDuskBarrier(
+        latDeg: Double,
+        lonDeg: Double,
+        declination: SolarDeclinationResult,
+        localHourAngleRad: Double = 0.0
+    ): DawnDuskBarrierState {
+        val latRad = latDeg * DEG_TO_RAD
+        val decRad = declination.declinationRad
+
+        val cosHourAngle = -tan(latRad) * tan(decRad)
+
+        var isPolarDay = false
+        var isPolarNight = false
+        val hourAngleRad: Double = when {
+            cosHourAngle <= -1.0 -> {
+                isPolarDay = true
+                PI
+            }
+            cosHourAngle >= 1.0 -> {
+                isPolarNight = true
+                0.0
+            }
+            else -> acos(cosHourAngle)
+        }
+
+        val h = localHourAngleRad
+        val eastComponent = cos(decRad) * sin(h)
+        val northComponent = sin(latRad) * cos(decRad) * cos(h) - cos(latRad) * sin(decRad)
+        val upComponent = cos(latRad) * cos(decRad) * cos(h) + sin(latRad) * sin(decRad)
+
+        val normalVector = doubleArrayOf(eastComponent, northComponent, upComponent)
+
+        return DawnDuskBarrierState(
+            latitudeDeg = latDeg,
+            longitudeDeg = lonDeg,
+            hourAngleRad = hourAngleRad,
+            hourAngleDeg = hourAngleRad * RAD_TO_DEG,
+            isPolarDay = isPolarDay,
+            isPolarNight = isPolarNight,
+            terminatorNormalVector = normalVector
+        )
+    }
+}
+        </code></pre>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mudos-visualizer');
+        const ctx = canvas.getContext('2d');
+        const terminal = document.getElementById('terminalLog');
+
+        let siriusAntaresAngle = 0;   
+        let moonOrbitAngle = 0;        
+        let sunAngle = Math.PI / 3;    
+        let zoomScale = 1.0;
+        let isSimulating = true;
+        let simSpeed = 1.0;
+        let currentDayOfYear = 172;
+        let currentLatitude = 21.42;
+
+        const R_MOON_ORBIT = 95;      
+        const R_REAR_SPOUT = 125;      
+        const R_FRONT_SPOUT = 165;     
+        const R_SUN = 205;             
+        const R_OUTER_RAIL = 250;      
+
+        const GITHUB_GATEWAY = "https://github.com/gatesfoundation/engineering-prototype-cartography";
+
+        function setCookie(name, value, days) {
+            try {
+                const d = new Date();
+                d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+                document.cookie = `${name}=${encodeURIComponent(value)};expires=${d.toUTCString()};path=/`;
+            } catch (e) {
+                console.warn("Cookie store unavailable", e);
+            }
+        }
+
+        function logToTerminal(msg) {
+            const time = new Date().toLocaleTimeString();
+            terminal.innerHTML += `\n[${time}] ${msg}`;
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function handlePartnerRedirect() {
+            logToTerminal("Executing partner routing routine...");
+            logToTerminal("Primary focus: Google Ecosystem Integration (Hardware/Software).");
+            setCookie("cartography_redirect_click", "PRIMARY_GOOGLE_ROUTE", 7);
+            window.open(GITHUB_GATEWAY, "_blank");
+        }
+
+        function triggerBooleanWest() {
+            zoomScale = Math.min(zoomScale + 0.15, 2.5);
+            document.getElementById('zoomBadge').innerText = `ZOOM: ${zoomScale.toFixed(2)}x | 36:40 ACTIVE`;
+            setCookie("cartography_zoom_mode", "WEST_ZOOM_IN", 7);
+            logToTerminal(`[BOOLEAN WEST] Zoom Scale: ${zoomScale.toFixed(2)}x | Focused celestial view.`);
+        }
+
+        function triggerBooleanEast() {
+            zoomScale = Math.max(zoomScale - 0.15, 0.5);
+            document.getElementById('zoomBadge').innerText = `ZOOM: ${zoomScale.toFixed(2)}x | 36:40 ACTIVE`;
+            setCookie("cartography_zoom_mode", "EAST_ZOOM_OUT", 7);
+            logToTerminal(`[BOOLEAN EAST] Zoom Scale: ${zoomScale.toFixed(2)}x | Wide field astronomical view.`);
+        }
+
+        function onDaySlider(val) {
+            currentDayOfYear = parseInt(val, 10);
+            document.getElementById('dayVal').innerText = currentDayOfYear;
+            updateTelemetryCalculations();
+        }
+
+        function setDay(val) {
+            document.getElementById('daySlider').value = val;
+            onDaySlider(val);
+            logToTerminal(`[ASTRONOMICAL PRESET] Day of Year set to ${val}.`);
+        }
+
+        function onLatSlider(val) {
+            currentLatitude = parseFloat(val);
+            document.getElementById('latVal').innerText = `${currentLatitude.toFixed(2)}° N`;
+            updateTelemetryCalculations();
+        }
+
+        function setLat(val) {
+            document.getElementById('latSlider').value = val;
+            onLatSlider(val);
+            logToTerminal(`[COORDINATE SET] Latitude locked to ${val.toFixed(2)}°.`);
+        }
+
+        function togglePlayPause() {
+            isSimulating = !isSimulating;
+            document.getElementById('playPauseBtn').innerText = isSimulating ? "PAUSE" : "RESUME";
+            logToTerminal(isSimulating ? "[ENGINE] Transit clock resumed." : "[ENGINE] Transit clock paused.");
+        }
+
+        function setSpeed(spd) {
+            simSpeed = spd;
+            logToTerminal(`[SIM SPEED] Multiplier set to ${spd}x.`);
+        }
+
+        // Spencer's Fourier Series Implementation in JavaScript
+        function calculateSolarDeclination(dayOfYear, julianCentury = 0.26) {
+            const gamma = (2.0 * Math.PI / 365.0) * (dayOfYear - 1);
+
+            const declinationRad = 0.006918 -
+                0.399912 * Math.cos(gamma) + 0.070257 * Math.sin(gamma) -
+                0.006758 * Math.cos(2 * gamma) + 0.000907 * Math.sin(2 * gamma) -
+                0.002697 * Math.cos(3 * gamma) + 0.00148 * Math.sin(3 * gamma);
+
+            const seasonalAxialTilt = 23.439291 - (0.0130042 * julianCentury);
+
+            const eotMinutes = 229.18 * (0.000075 +
+                0.001868 * Math.cos(gamma) - 0.032077 * Math.sin(gamma) -
+                0.014615 * Math.cos(2 * gamma) - 0.040849 * Math.sin(2 * gamma));
+
+            return {
+                dayOfYear,
+                declinationRad,
+                declinationDeg: declinationRad * (180.0 / Math.PI),
+                axialTiltDeg: seasonalAxialTilt,
+                equationOfTimeMinutes: eotMinutes
+            };
+        }
+
+        function computeDawnDuskBarrier(latDeg, declination, localHourAngleRad = 0.0) {
+            const DEG_TO_RAD = Math.PI / 180.0;
+            const RAD_TO_DEG = 180.0 / Math.PI;
+            const latRad = latDeg * DEG_TO_RAD;
+            const decRad = declination.declinationRad;
+
+            const cosHourAngle = -Math.tan(latRad) * Math.tan(decRad);
+
+            let isPolarDay = false;
+            let isPolarNight = false;
+            let hourAngleRad = 0;
+
+            if (cosHourAngle <= -1.0) {
+                isPolarDay = true;
+                hourAngleRad = Math.PI;
+            } else if (cosHourAngle >= 1.0) {
+                isPolarNight = true;
+                hourAngleRad = 0.0;
+            } else {
+                hourAngleRad = Math.acos(cosHourAngle);
+            }
+
+            const h = localHourAngleRad;
+            const east = Math.cos(decRad) * Math.sin(h);
+            const north = Math.sin(latRad) * Math.cos(decRad) * Math.cos(h) - Math.cos(latRad) * Math.sin(decRad);
+            const up = Math.cos(latRad) * Math.cos(decRad) * Math.cos(h) + Math.sin(latRad) * Math.sin(decRad);
+
+            return {
+                hourAngleRad,
+                hourAngleDeg: hourAngleRad * RAD_TO_DEG,
+                isPolarDay,
+                isPolarNight,
+                normal: [east, north, up]
+            };
+        }
+
+        function updateTelemetryCalculations() {
+            const dec = calculateSolarDeclination(currentDayOfYear);
+            const barrier = computeDawnDuskBarrier(currentLatitude, dec, sunAngle);
+
+            document.getElementById('decReadout').innerText = `${dec.declinationDeg >= 0 ? '+' : ''}${dec.declinationDeg.toFixed(3)}° (${dec.declinationRad.toFixed(4)} rad)`;
+            document.getElementById('tiltReadout').innerText = `${dec.axialTiltDeg.toFixed(3)}° (J2000 Epoch)`;
+            document.getElementById('eotReadout').innerText = `${dec.equationOfTimeMinutes >= 0 ? '+' : ''}${dec.equationOfTimeMinutes.toFixed(2)} min`;
+            document.getElementById('haReadout').innerText = `${barrier.hourAngleDeg.toFixed(2)}° (${barrier.hourAngleRad.toFixed(3)} rad)`;
+            document.getElementById('vectorReadout').innerText = `[${barrier.normal[0].toFixed(2)}, ${barrier.normal[1].toFixed(2)}, ${barrier.normal[2].toFixed(2)}]`;
+
+            const isDay = !barrier.isPolarNight && Math.sin(sunAngle) > 0.0;
+            const statusBadge = document.getElementById('transitStatusBadge');
+            if (isDay) {
+                statusBadge.innerText = "☀ DAYLIGHT (DAWN PASS)";
+                statusBadge.style.color = "var(--dawn-gold)";
+            } else {
+                statusBadge.innerText = "☽ NIGHT (DUSK PASS)";
+                statusBadge.style.color = "var(--dusk-purple)";
+            }
+        }
+
+        function drawSiriusBeacon(x, y, r, label) {
+            const haloGrad = ctx.createRadialGradient(x, y, 0, x, y, r * 3.5);
+            haloGrad.addColorStop(0, '#ffffff');
+            haloGrad.addColorStop(0.35, '#88ccff');
+            haloGrad.addColorStop(0.7, 'rgba(0,150,255,0.25)');
+            haloGrad.addColorStop(1, 'rgba(0,150,255,0)');
+            ctx.fillStyle = haloGrad;
+            ctx.beginPath(); ctx.arc(x, y, r * 3.5, 0, Math.PI * 2); ctx.fill();
+
+            // Diamond flare spikes
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(x - r * 3, y); ctx.lineTo(x + r * 3, y);
+            ctx.moveTo(x, y - r * 3); ctx.lineTo(x, y + r * 3);
+            ctx.stroke();
+
+            // Brilliant core
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+
+            if (label) {
+                ctx.fillStyle = '#88ccff';
+                ctx.font = 'bold 11px monospace';
+                const lines = label.split('\n');
+                lines.forEach((l, idx) => {
+                    ctx.fillText(l, x + 12, y + (idx * 13) - 2);
+                });
+            }
+        }
+
+        function drawStar(x, y, r, color, label) {
+            const halo = ctx.createRadialGradient(x, y, 0, x, y, r * 2.5);
+            halo.addColorStop(0, '#ffffff');
+            halo.addColorStop(0.4, color);
+            halo.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = halo;
+            ctx.beginPath(); ctx.arc(x, y, r * 2.5, 0, Math.PI * 2); ctx.fill();
+
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+            if (label) {
+                ctx.fillStyle = color;
+                ctx.font = '10px monospace';
+                const lines = label.split('\n');
+                lines.forEach((l, idx) => {
+                    ctx.fillText(l, x + 10, y + (idx * 11));
+                });
+            }
+        }
+
+        function drawBaseNode(x, y, label, color = '#00ffaa', isHighlight = false) {
+            ctx.fillStyle = color;
+            ctx.beginPath(); ctx.arc(x, y, isHighlight ? 7 : 5, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = isHighlight ? 2 : 1.2; ctx.stroke();
+            ctx.fillStyle = isHighlight ? '#ffaa00' : '#e0e0e0'; 
+            ctx.font = isHighlight ? 'bold 11px monospace' : '10px monospace';
+            ctx.fillText(label, x + 10, y + 4);
+        }
+
+        function drawDawnDuskBarrier(cx, cy, radius) {
+            const terminatorAngle = sunAngle + Math.PI / 2;
+            const barrierLength = radius * 1.15;
+
+            const dx = Math.cos(terminatorAngle) * barrierLength;
+            const dy = Math.sin(terminatorAngle) * barrierLength;
+
+            const grad = ctx.createLinearGradient(cx - dx, cy - dy, cx + dx, cy + dy);
+            grad.addColorStop(0, '#ffaa00');  
+            grad.addColorStop(0.5, '#ffffff'); 
+            grad.addColorStop(1, '#8844aa');  
+
+            // Glowing halo line
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 4;
+            ctx.globalAlpha = 0.35;
+            ctx.beginPath();
+            ctx.moveTo(cx - dx, cy - dy);
+            ctx.lineTo(cx + dx, cy + dy);
+            ctx.stroke();
+            ctx.globalAlpha = 1.0;
+
+            // Crisp dashed barrier
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 2.5;
+            ctx.setLineDash([8, 5]);
+            ctx.beginPath();
+            ctx.moveTo(cx - dx, cy - dy);
+            ctx.lineTo(cx + dx, cy + dy);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Barrier Terminal Nodes
+            ctx.fillStyle = '#ffaa00';
+            ctx.beginPath(); ctx.arc(cx - dx, cy - dy, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#8844aa';
+            ctx.beginPath(); ctx.arc(cx + dx, cy + dy, 4, 0, Math.PI * 2); ctx.fill();
+
+            // Label
+            ctx.fillStyle = '#ffaa00';
+            ctx.font = 'bold 9px monospace';
+            ctx.fillText("DAWN BARRIER", cx - dx + 8, cy - dy - 4);
+            ctx.fillStyle = '#8844aa';
+            ctx.fillText("DUSK BARRIER", cx + dx - 75, cy + dy + 12);
+        }
+
+        function renderFrame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const scale = zoomScale;
+
+            const rMoon = R_MOON_ORBIT * scale;
+            const rRear = R_REAR_SPOUT * scale;
+            const rFront = R_FRONT_SPOUT * scale;
+            const rSun = R_SUN * scale;
+            const rOuter = R_OUTER_RAIL * scale;
+
+            // 1. Concentric Astrological Grid
+            ctx.strokeStyle = 'rgba(0, 255, 170, 0.08)';
+            ctx.lineWidth = 1;
+            for (let r = 40 * scale; r <= rOuter * 1.2; r += 40 * scale) {
+                ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+            }
+
+            // 12 Sectors
+            ctx.strokeStyle = 'rgba(184, 115, 51, 0.12)';
+            for (let i = 0; i < 12; i++) {
+                const rad = i * (Math.PI / 6);
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(cx + rOuter * 1.15 * Math.cos(rad), cy + rOuter * 1.15 * Math.sin(rad));
+                ctx.stroke();
+            }
+
+            // 2. Night Hemisphere Tint
+            const terminatorAngle = sunAngle + Math.PI / 2;
+            ctx.fillStyle = 'rgba(0, 8, 20, 0.45)';
+            ctx.beginPath();
+            ctx.arc(cx, cy, rOuter, terminatorAngle, terminatorAngle + Math.PI);
+            ctx.fill();
+
+            // 3. Main Concentric Orbits
+            // Moon orbit
+            ctx.strokeStyle = 'rgba(136, 204, 255, 0.35)';
+            ctx.lineWidth = 1.2;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath(); ctx.arc(cx, cy, rMoon, 0, Math.PI * 2); ctx.stroke();
+
+            // Bucket Mouth navigation spouts
+            ctx.strokeStyle = 'rgba(184, 115, 51, 0.35)';
+            ctx.setLineDash([2, 4]);
+            ctx.beginPath(); ctx.arc(cx, cy, rRear, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(cx, cy, rFront, 0, Math.PI * 2); ctx.stroke();
+
+            // Sun Ecliptic
+            ctx.strokeStyle = 'rgba(255, 170, 0, 0.45)';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([]);
+            ctx.beginPath(); ctx.arc(cx, cy, rSun, 0, Math.PI * 2); ctx.stroke();
+
+            // Outer Rail with degree ticks
+            ctx.strokeStyle = '#b87333';
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(cx, cy, rOuter, 0, Math.PI * 2); ctx.stroke();
+
+            // Bucket Mouth Highlight Arcs
+            ctx.strokeStyle = '#00ffaa';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(cx, cy, rFront, siriusAntaresAngle - 0.55, siriusAntaresAngle + 0.55);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#b87333';
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.arc(cx, cy, rRear, siriusAntaresAngle + Math.PI - 0.55, siriusAntaresAngle + Math.PI + 0.55);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Degree marks on outer rail
+            for (let deg = 0; deg < 360; deg += 10) {
+                const rad = deg * (Math.PI / 180);
+                const isMajor = (deg % 30 === 0);
+                const tickLen = isMajor ? 8 : 4;
+                ctx.strokeStyle = isMajor ? '#b87333' : '#4a4a4a';
+                ctx.lineWidth = isMajor ? 1.5 : 1;
+                ctx.beginPath();
+                ctx.moveTo(cx + (rOuter - tickLen) * Math.cos(rad), cy + (rOuter - tickLen) * Math.sin(rad));
+                ctx.lineTo(cx + rOuter * Math.cos(rad), cy + rOuter * Math.sin(rad));
+                ctx.stroke();
+            }
+
+            // 4. Central Intersection (B1-B3 Anchor × B2-B4 Equator)
+            ctx.strokeStyle = 'rgba(255, 136, 51, 0.7)';
+            ctx.lineWidth = 1.8;
+            ctx.setLineDash([8, 6]);
+            // Vertical Anchor Meridian
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - rOuter * 1.12);
+            ctx.lineTo(cx, cy + rOuter * 1.12);
+            ctx.stroke();
+
+            // Horizontal Equator
+            ctx.strokeStyle = 'rgba(0, 255, 170, 0.7)';
+            ctx.beginPath();
+            ctx.moveTo(cx - rOuter * 1.12, cy);
+            ctx.lineTo(cx + rOuter * 1.12, cy);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Center Origin Target (Ka'aba)
+            ctx.strokeStyle = '#b87333';
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(cx, cy, 10, 0, Math.PI * 2); ctx.stroke();
+            ctx.fillStyle = '#00ffaa';
+            ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fill();
+
+            // 5. Dawn/Dusk Barrier
+            drawDawnDuskBarrier(cx, cy, rOuter);
+
+            // 6. Base Anchor Nodes
+            drawBaseNode(cx, cy - rOuter, "B1 (NORTH ANCHOR)", "#00ffaa");
+            drawBaseNode(cx + rOuter, cy, "B2 (EAST EQUATOR)", "#00ffaa");
+            drawBaseNode(cx, cy + rOuter, "B3 (SOUTH ANCHOR)", "#00ffaa");
+            drawBaseNode(cx - rOuter, cy, "B4 (WEST EQUATOR)", "#00ffaa");
+            drawBaseNode(cx, cy, "ORIGIN: KA'ABA (21.42° N, 39.82° E)", "#ffaa00", true);
+
+            // Cardinal bearing labels
+            ctx.fillStyle = '#da8a43';
+            ctx.font = 'bold 11px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText("N [000°]", cx, cy - rOuter - 14);
+            ctx.fillText("S [180°]", cx, cy + rOuter + 22);
+            ctx.textAlign = 'left';
+            ctx.fillText("E [090°]", cx + rOuter + 14, cy + 4);
+            ctx.textAlign = 'right';
+            ctx.fillText("W [270°]", cx - rOuter - 14, cy + 4);
+            ctx.textAlign = 'left';
+
+            // 7. Celestial Bodies
+            // Sirius Beacon (53:49)
+            const siriusX = cx + rOuter * Math.cos(siriusAntaresAngle);
+            const siriusY = cy + rOuter * Math.sin(siriusAntaresAngle);
+            drawSiriusBeacon(siriusX, siriusY, 8 * scale, "★ SIRIUS (As-Shi'ra)\nAlpha CMa // 53:49");
+
+            // Antares Counter-Star
+            const antaresX = cx + rOuter * Math.cos(siriusAntaresAngle + Math.PI);
+            const antaresY = cy + rOuter * Math.sin(siriusAntaresAngle + Math.PI);
+            drawStar(antaresX, antaresY, 5 * scale, '#ff4444', "ANTARES (Alpha Sco)");
+
+            // Moon Node (LUNA_01)
+            const moonX = cx + rMoon * Math.cos(moonOrbitAngle);
+            const moonY = cy + rMoon * Math.sin(moonOrbitAngle);
+            drawStar(moonX, moonY, 7 * scale, '#d0e0ff', "☽ LUNA_01 (The Moon)");
+
+            // Sun Node (SOL_01)
+            const sunX = cx + rSun * Math.cos(sunAngle);
+            const sunY = cy + rSun * Math.sin(sunAngle);
+            // Solar Corona Rays
+            ctx.strokeStyle = 'rgba(255, 170, 0, 0.8)';
+            ctx.lineWidth = 1.8;
+            for (let i = 0; i < 12; i++) {
+                const rRay = i * (Math.PI / 6);
+                ctx.beginPath();
+                ctx.moveTo(sunX + 14 * scale * Math.cos(rRay), sunY + 14 * scale * Math.sin(rRay));
+                ctx.lineTo(sunX + 22 * scale * Math.cos(rRay), sunY + 22 * scale * Math.sin(rRay));
+                ctx.stroke();
+            }
+            drawStar(sunX, sunY, 11 * scale, '#ffaa00', `☀ SOL_01 (Sun)\nDec: ${document.getElementById('decReadout').innerText.split(' ')[0]}`);
+        }
+
+        function animationLoop() {
+            if (isSimulating) {
+                sunAngle = (sunAngle + 0.0035 * simSpeed) % (2 * Math.PI);
+                moonOrbitAngle = (moonOrbitAngle + 0.0028 * simSpeed) % (2 * Math.PI);
+                siriusAntaresAngle = (siriusAntaresAngle + 0.0014 * simSpeed) % (2 * Math.PI);
+                updateTelemetryCalculations();
+            }
+            renderFrame();
+            requestAnimationFrame(animationLoop);
+        }
+
+        // Init
+        window.addEventListener('DOMContentLoaded', () => {
+            updateTelemetryCalculations();
+            animationLoop();
+            logToTerminal("[COORDINATE LOCK] Anchor Meridian (B1-B3) × Equator (B2-B4) active.");
+        });
+    </script>
+</body>
+</html>

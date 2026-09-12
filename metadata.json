@@ -1,0 +1,6 @@
+{
+  "name": "Project Kenji Cartography",
+  "description": "Celestial Navigation & Dawn/Dusk Barrier Cartography with unified solar declination engine and astronomical telemetry.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

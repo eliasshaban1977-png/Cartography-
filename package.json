@@ -1,0 +1,10 @@
+{
+  "name": "project-kenji-cartography",
+  "version": "1.0.0",
+  "description": "Project Kenji: Celestial Navigation & Dawn/Dusk Barrier Cartography",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js",
+    "build": "echo 'Build successful'"
+  }
+}
